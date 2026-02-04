@@ -32,6 +32,10 @@ let package = Package(
             name: "mlx-audio-swift-tts",
             targets: ["mlx-audio-swift-tts"],
         ),
+        .executable(
+            name: "mlx-audio-swift-sts",
+            targets: ["mlx-audio-swift-sts"],
+        ),
     ],
     dependencies: [
         .package(url: "https://github.com/ml-explore/mlx-swift.git", .upToNextMajor(from: "0.30.3")),
@@ -104,9 +108,16 @@ let package = Package(
             name: "MLXAudioSTS",
             dependencies: [
                 "MLXAudioCore",
+                "MLXAudioCodecs",
                 "MLXAudioTTS",
                 "MLXAudioSTT",
                 .product(name: "MLX", package: "mlx-swift"),
+                .product(name: "MLXNN", package: "mlx-swift"),
+                .product(name: "MLXFast", package: "mlx-swift"),
+                .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
+                .product(name: "MLXLLM", package: "mlx-swift-lm"),
+                .product(name: "HuggingFace", package: "swift-huggingface"),
+                .product(name: "Transformers", package: "swift-transformers"),
             ],
             path: "Sources/MLXAudioSTS"
         ),
@@ -126,6 +137,12 @@ let package = Package(
             name: "mlx-audio-swift-tts",
             dependencies: ["MLXAudioCore", "MLXAudioTTS", "MLXAudioSTT"],
             path: "Sources/mlx-audio-swift-tts"
+        ),
+
+        .executableTarget(
+            name: "mlx-audio-swift-sts",
+            dependencies: ["MLXAudioCore", "MLXAudioSTS"],
+            path: "Sources/mlx-audio-swift-sts"
         ),
 
         // MARK: - Tests

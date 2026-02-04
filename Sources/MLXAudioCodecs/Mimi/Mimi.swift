@@ -357,9 +357,15 @@ public extension Mimi {
             }
             if k.hasSuffix(".convtr.weight") {
                 if v.ndim == 3 {
-                    var w = swappedAxes(v, 0, 1) // [1,0,2]
-                    w = swappedAxes(w, 1, 2) // [1,2,0]
-                    v = w
+                    if v.dim(1) == 1 {
+                        // Depthwise: [C, 1, K] → [C, K, 1]
+                        v = swappedAxes(v, 1, 2)
+                    } else {
+                        // Non-depthwise: [in, out, K] → [out, K, in]
+                        var w = swappedAxes(v, 0, 1) // [1,0,2]
+                        w = swappedAxes(w, 1, 2) // [1,2,0]
+                        v = w
+                    }
                 }
             }
 
