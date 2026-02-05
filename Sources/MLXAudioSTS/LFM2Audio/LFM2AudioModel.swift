@@ -340,7 +340,12 @@ public final class LFM2AudioModel: Module {
                     sanitized[key] = value.transposed(0, 2, 1)
                 }
             } else if key.contains("pre_encode.conv") && value.ndim == 4 {
-                if value.dim(-1) != value.dim(1) || value.dim(0) > value.dim(-1) {
+                let d1 = value.dim(1)
+                let d2 = value.dim(2)
+                let d3 = value.dim(3)
+                // Only transpose if this looks like NCHW (out, in, kH, kW).
+                let isLikelyNCHW = (d2 == d3) && (d1 != d2)
+                if isLikelyNCHW {
                     sanitized[key] = value.transposed(0, 2, 3, 1)  // NCHW -> NHWC
                 }
             }
