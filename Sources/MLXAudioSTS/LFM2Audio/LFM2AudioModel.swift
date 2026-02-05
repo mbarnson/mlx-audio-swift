@@ -347,12 +347,12 @@ public final class LFM2AudioModel: Module {
                 let d3 = value.dim(3)
 
                 // Extract layer index to determine expected input channels.
-                let prefix = "audio_encoder.pre_encode.conv."
+                let marker = "pre_encode.conv."
                 var expectedIn: Int? = nil
-                if let range = key.range(of: prefix) {
+                if let range = key.range(of: marker) {
                     let rest = key[range.upperBound...]
-                    if let dotIdx = rest.firstIndex(of: "."),
-                       let layerIdx = Int(rest[..<dotIdx]) {
+                    let digits = rest.prefix { $0.isNumber }
+                    if let layerIdx = Int(digits) {
                         expectedIn = (layerIdx == 0) ? 1 : value.dim(0)
                     }
                 }
@@ -362,6 +362,18 @@ public final class LFM2AudioModel: Module {
                         sanitized[key] = value.transposed(0, 2, 3, 1) // (out, in, kH, kW) -> NHWC
                     } else if d2 == expectedIn {
                         sanitized[key] = value.transposed(0, 1, 3, 2) // (out, kH, in, kW) -> NHWC
+                    }
+                } else if expectedIn == nil {
+                    let isOne1 = d1 == 1
+                    let isTwo1 = d2 == 1
+                    let isThree1 = d3 == 1
+                    let ones = [isOne1, isTwo1, isThree1].filter { $0 }.count
+                    if ones == 1 && d3 != 1 {
+                        if isOne1 {
+                            sanitized[key] = value.transposed(0, 2, 3, 1) // (out, 1, kH, kW) -> NHWC
+                        } else if isTwo1 {
+                            sanitized[key] = value.transposed(0, 1, 3, 2) // (out, kH, 1, kW) -> NHWC
+                        }
                     }
                 }
             }
