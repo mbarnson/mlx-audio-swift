@@ -339,11 +339,12 @@ final class ConvSubsampling: Module {
     func callAsFunction(_ x: MLXArray) -> MLXArray {
         let B = x.dim(0)
 
-        // Reshape for 2D conv: (B, T, D) -> (B, T, D, 1) - MLX NHWC format
-        var out = x.expandedDimensions(axis: 3)
+        // Reshape for 2D conv: (B, T, D) -> (B, T, C=1, D)
+        // MLX Swift Conv2d weight format is (O, kH, I, kW), expects channels at input dim 2
+        var out = x.expandedDimensions(axis: 2)
 
         // Conv0 + ReLU
-        out = relu(convLayers[0](out))  // (B, T/2, D/2, convChannels)
+        out = relu(convLayers[0](out))  // (B, T/2, convChannels, D/2)
         // Conv2 (depthwise) + Conv3 (pointwise) + ReLU
         out = convLayers[1](out)
         out = relu(convLayers[2](out))
@@ -352,11 +353,10 @@ final class ConvSubsampling: Module {
         out = relu(convLayers[4](out))
 
         let Tout = out.dim(1)
-        let Dout = out.dim(2)
-        let C = out.dim(3)
+        let C = out.dim(2)
+        let Dout = out.dim(3)
 
-        // (B, T_out, D_out, C) -> (B, T_out, C, D_out) -> (B, T_out, C*D_out)
-        out = out.transposed(0, 1, 3, 2)
+        // (B, T_out, C, D_out) -> (B, T_out, C*D_out)
         out = out.reshaped(B, Tout, -1)
         out = self.out(out)
 
