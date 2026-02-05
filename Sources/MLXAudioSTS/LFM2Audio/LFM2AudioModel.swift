@@ -339,14 +339,30 @@ public final class LFM2AudioModel: Module {
                 if value.dim(-1) > value.dim(1) {
                     sanitized[key] = value.transposed(0, 2, 1)
                 }
-            } else if key.contains("pre_encode.conv") && value.ndim == 4 {
+            } else if key.contains("pre_encode.conv") && key.contains("weight") && value.ndim == 4 {
+                // Ensure pre-encode conv weights are NHWC: (out, kH, kW, in)
+                // Some checkpoints store (out, in, kH, kW) or (out, kH, in, kW).
                 let d1 = value.dim(1)
                 let d2 = value.dim(2)
                 let d3 = value.dim(3)
-                // Only transpose if this looks like NCHW (out, in, kH, kW).
-                let isLikelyNCHW = (d2 == d3) && (d1 != d2)
-                if isLikelyNCHW {
-                    sanitized[key] = value.transposed(0, 2, 3, 1)  // NCHW -> NHWC
+
+                // Extract layer index to determine expected input channels.
+                let prefix = "audio_encoder.pre_encode.conv."
+                var expectedIn: Int? = nil
+                if let range = key.range(of: prefix) {
+                    let rest = key[range.upperBound...]
+                    if let dotIdx = rest.firstIndex(of: "."),
+                       let layerIdx = Int(rest[..<dotIdx]) {
+                        expectedIn = (layerIdx == 0) ? 1 : value.dim(0)
+                    }
+                }
+
+                if let expectedIn, d3 != expectedIn {
+                    if d1 == expectedIn {
+                        sanitized[key] = value.transposed(0, 2, 3, 1) // (out, in, kH, kW) -> NHWC
+                    } else if d2 == expectedIn {
+                        sanitized[key] = value.transposed(0, 1, 3, 2) // (out, kH, in, kW) -> NHWC
+                    }
                 }
             }
         }
