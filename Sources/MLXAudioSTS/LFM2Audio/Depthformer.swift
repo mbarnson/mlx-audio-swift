@@ -159,15 +159,12 @@ final class DepthformerAttention: Module {
             vT = MLX.repeated(vT, count: nRep, axis: 1)
         }
 
-        // Scaled dot-product attention
-        var scores = MLX.matmul(qT, kT.transposed(0, 1, 3, 2)) * MLXArray(scale)
-        if let mask = mask {
-            scores = scores + mask
-        }
-        let attn = softmax(scores, axis: -1)
-        let out = MLX.matmul(attn, vT)
-            .transposed(0, 2, 1, 3)
-            .reshaped(B, L, -1)
+        // Scaled dot-product attention using MLXFast optimized kernel
+        let output = MLXFast.scaledDotProductAttention(
+            queries: qT, keys: kT, values: vT,
+            scale: scale, mask: mask
+        )
+        let out = output.transposed(0, 2, 1, 3).reshaped(B, L, -1)
 
         return (oProj(out), newCache)
     }
